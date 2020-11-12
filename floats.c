@@ -1,3 +1,5 @@
+/* Floats.c, Written by: Russell Abernethy */
+
 #include <stdio.h>
 #include <limits.h>
 #include <math.h>
@@ -9,40 +11,14 @@
 #define SPEC 2
 #define BIAS 127
 
-
-/*
-    Declare a "typedef struct {} flt;" to contain data for a float
-    The data should include:
-        An integer for the sign
-            (1 for positive, -1 for negative)
-        An integer for the exponent value
-            (should be bit value to integer minus BIAS or -126 for denormalized)
-        A float to contain the value of the mantissa
-            (Actual float value extracted from the binary value)
-        An integer to contain the mode using the defines above
-            (NORM, DNORM and SPEC)
-    Example after processing: -15.375 = 1 10000010 11101100000000000000000
-        sign = -1
-        exp = 3
-        man = 0.9218750000
-        mode = NORM
-*/
+/* flt struct: represents the differnet parts of a float. */
 typedef struct flt {
     int sign;
     int exp;
     float man;
     int mode;
-}FLT;
-/*
-    Write a function get_flt_bits_int to return an integer with the
-    bits copied from a float.
-    Example:
-        for f = -15.375,
-        the bits of int n = 11000001011101100000000000000000
-    Look at the slides and code from the float lectures and use the
-    indirection trick.  This can easily be done in one line of code.
-    The function should accept a float and return an int.
-*/
+} FLT;
+
 /* Gets the bit representation of a float as an integer. */
 int get_flt_bits_int(float f) {
     return *(int *)(&f);
@@ -50,36 +26,42 @@ int get_flt_bits_int(float f) {
 
 /* Gets the first bit and returns 1 if neg and 0 otherwise. */
 char get_flt_sign_char(float f) {
-    return (get_flt_bits_int(f) >> 31 & 1 == 1) ? '1' : '0';
+    return (((get_flt_bits_int(f) >> 31) & 1) == 1) ? '1' : '0';
 }
 
 /* Gets the sign bit and returns -1 if neg and 1 otherwise. */
 int get_flt_sign_val(float f) {
-    return (get_flt_bits_int(f) >> 31 & 1 == 1) ? -1 : 1;
+    return (((get_flt_bits_int(f) >> 31) & 1) == 1) ? -1 : 1;
 }
 
 /* Gets the exponent part of the float and returns it as a string. */
 char * get_flt_exp_str(float f) {
+
     int n = get_flt_bits_int(f) >> 23;
     char *bits = malloc(sizeof(char) * 8);
+
     int i;
     for(i = 1; i <= 8; i++) {
         bits[8-i] = (n & 1) + '0';
         n = n >> 1;
     } bits[i] = '\0';
+    
     return bits;
 }
 
 /* Gets the value of the exponent part. */
 int get_flt_exp_val(float f) {
+
     int n = get_flt_bits_int(f) >> 23;
     int exp = 0;
+
     int i;
     for(i = 0; i < 8; i++) {
-        if(n & 1 == 1)
+        if( (n & 1) == 1)
             exp += pow(2,i);
         n = n >> 1;
     }
+
     return (exp == 255) ? exp : exp - BIAS;
 }
 
@@ -111,7 +93,7 @@ float get_flt_man_val(float f) {
 
     int i;
     for(i = 23; i > 0; i--) {
-        if(n & 1 == 1)
+        if ( (n & 1) == 1)
             man += pow(2, -i);
         n = n >> 1;
     }
@@ -161,7 +143,6 @@ struct flt get_flt_val_flt(float f) {
 float get_flt_bits_val(struct flt flt) {
     
     switch (flt.mode) {
-
     case DNORM:
         /* Denormalized Form */
         return pow(-1,flt.sign) * flt.man * pow(2, -126);
@@ -170,7 +151,6 @@ float get_flt_bits_val(struct flt flt) {
         /* +/- ∞ */
         if (flt.man == 0)
             return(flt.sign == -1) ? -INFINITY : INFINITY;
-
         /* NaN */
         return (flt.sign == -1) ? -NAN : NAN;
 
@@ -186,7 +166,6 @@ void print_flt(struct flt flt) {
     printf("sign = %d\nexp = %d\nman = %f\n", flt.sign, flt.exp, flt.man);
 
     switch (flt.mode) {
-
     case DNORM:
         printf("mode = denormalized\n\n");
         break;
@@ -204,9 +183,11 @@ void print_flt(struct flt flt) {
 int main(){
 
     float f;
+
     /* Read in user input. */
     printf("\nEnter a floating point number: ");
     scanf("%f", &f);
+
     /* Print out float info. */
     printf("f = %f\n\n", f);
 
