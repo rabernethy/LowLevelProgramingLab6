@@ -80,78 +80,52 @@ int get_flt_exp_val(float f) {
             exp += pow(2,i);
         n = n >> 1;
     }
-    return exp - BIAS;
+    return (exp == 255) ? exp : exp - BIAS;
 }
 
 /* Gets the mode of the float. */
 int get_flt_exp_mode(float f) {
-    return (get_flt_exp_val(f) == -126) ? DNORM : (get_flt_exp_val(f) == 127) ? SPEC : NORM; 
+    return (get_flt_exp_val(f) == -126) ? DNORM : (get_flt_exp_val(f) == 255) ? SPEC : NORM; 
 }
 
 /* Gets the mantissa part of the float and returns it as a string. */
 char * get_flt_man_str(float f) {
+
     int n = get_flt_bits_int(f);
     char *bits = malloc(sizeof(char) * 23);
+
     int i;
     for(i = 1; i <= 23; i++) {
         bits[23-i] = (n & 1) + '0';
         n = n >> 1;
     } bits[i] = '\0';
+
     return bits;
 }
 
-
-/*
-    Write a function to return a float containing the
-    actual float value of the mantissa of a float.  You
-    should call get_flt_bits_int to get the bits in an int
-    and return the int with the mantissa value.
-    Example:
-        for f = -15.375
-            n = 11000001011101100000000000000000
-            the mantissa bits are 11101100000000000000000
-            the actual value of the mantissa is 0.9218750000
-    The function should accept a float and return an int.
-*/
 /* Gets the value of the matissa part as a float. */
 float get_flt_man_val(float f) {
+
     int n = get_flt_bits_int(f);
     float man = 0.0;
+
     int i;
     for(i = 23; i > 0; i--) {
         if(n & 1 == 1)
             man += pow(2, -i);
         n = n >> 1;
     }
+
     return man;
 }
 
-/*
-    Write a function to return a string containing the
-    actual binary value of a float in a char array.  You
-    should call get_flt_sign_char, get_flt_exp_str and
-    get_flt_man_str to get the bits in an char and two
-    strings and return the concatenated string.
-    Example:
-        for f = -15.375
-            n = 11000001011101100000000000000000
-            The sign is '1'
-            the exponent is "10000010"
-            and the mantissa bits are "11101100000000000000000"
-            The string should be formatted as:
-                "1 10000010 11101100000000000000000" to clearly
-                 1 10000010 1110110000000000000000
-                            11101100000000000000000
-                separate the 3 parts.
-    The function should accept a float and return a string.
-*/
-
+/* Get the formatted float bit string. */
 char * get_flt_bits_str(float f) {
-    
+
     char * bits = malloc(sizeof(char) * 35);
     int index = -1;
     int i;
-
+    
     bits[++index] = get_flt_sign_char(f);
     bits[++index] = ' ';
 
@@ -170,72 +144,85 @@ char * get_flt_bits_str(float f) {
     return bits;
 }
 
+/* Creates a flt struct to represent the differnet parts of the float. */
+struct flt get_flt_val_flt(float f) {
 
-/*
-    Write a function to separate the parts of a float
-    into a flt struct as described above.  You should
-    call get_flt_sign_val, get_flt_exp_mode,
-    get_flt_exp_val and get_flt_man_val.
-    Hint:  make sure to set exponent to -126 for
-    DNORM mode.
-*/
+    struct flt flt;
 
+    flt.sign = get_flt_sign_val(f);
+    flt.exp = get_flt_exp_val(f);
+    flt.man = get_flt_man_val(f);
+    flt.mode = get_flt_exp_mode(f);
 
+    return flt;
+}
 
+/* Gets the float number that coresponds to the flt struct. */
+float get_flt_bits_val(struct flt flt) {
+    
+    switch (flt.mode) {
 
-/*
-    Write a function to print a flt struct to screen.
-    It should accept a flt struct and return nothing.
-    Hint: Use if statement to print mode.
-*/
+    case DNORM:
+        /* Denormalized Form */
+        return pow(-1,flt.sign) * flt.man * pow(2, -126);
 
+    case SPEC:
+        /* +/- ∞ */
+        if (flt.man == 0)
+            return(flt.sign == -1) ? -INFINITY : INFINITY;
 
+        /* NaN */
+        return (flt.sign == -1) ? -NAN : NAN;
 
+    default:
+        /* Normalized Form */
+        return flt.sign * (1 + flt.man) * pow(2,flt.exp);
+    }
+}
 
-/*
-    Write a function to get the actual float value back
-    out of a flt struct.
-    Hints:
-        The float value produced will depend on the mode.
-        To set a float to infinity use the math library constant INFINITY
-        To set a float to not-a-number use the math library constant NAN
-        Check the slides and text for conditions for NORN, DNORM and SPEC
-        You need to return (sign) * M * 2^e
-*/
+/* Prints the flt struct to screen. */
+void print_flt(struct flt flt) {
 
+    printf("sign = %d\nexp = %d\nman = %f\n", flt.sign, flt.exp, flt.man);
 
+    switch (flt.mode) {
 
+    case DNORM:
+        printf("mode = denormalized\n\n");
+        break;
 
-/*
-    Write a main function that calls an prints results for
-    each function when completed.
-    get_flt_sign_char
-    get_flt_sign_val
+    case SPEC:
+        printf("mode = special\n\n");
+        break;
 
-    get_flt_exp_str
-    get_flt_exp_val
+    default:
+        printf("mode = normalized\n\n");
+        break;
+    }
+}
 
-    get_flt_man_str
-    get_flt_man_val
-
-    get_flt_bits_str
-
-    get_flt_val_flt
-    print_flt
-
-    get_flt_bits_val
-*/
 int main(){
 
-    float f = -15.375;
+    float f;
+    /* Read in user input. */
+    printf("\nEnter a floating point number: ");
+    scanf("%f", &f);
+    /* Print out float info. */
+    printf("f = %f\n\n", f);
 
-    printf("get_flt_sign_char(%f) = %c\n", f, get_flt_sign_char(f));
-    printf("get_flt_sign_val(%f) = %d\n", f, get_flt_sign_val(f));
-    printf("get_flt_exp_str(%f) = %s\n", f, get_flt_exp_str(f));
-    printf("get_flt_exp_val(%f) = %d\n", f, get_flt_exp_val(f));
-    printf("get_flt_exp_mode(%f) = %d\n", f, get_flt_exp_mode(f));
-    printf("get_flt_man_str(%f) = %s\n", f, get_flt_man_str(f));
-    printf("get_flt_man_val(%f) = %f\n", f, get_flt_man_val(f));
-    printf("get_flt_bits_str(%f) = %s\n", f, get_flt_bits_str(f));
+    printf("sig = %c\n", get_flt_sign_char(f));
+    printf("s = %d\n\n", get_flt_sign_val(f));
 
+    printf("exp = %s\n", get_flt_exp_str(f));
+    printf("e = %d\n\n", get_flt_exp_val(f));
+
+    printf("man = %s\n", get_flt_man_str(f));
+    printf("m = %f\n\n", get_flt_man_val(f));
+
+    printf("bits = %s\n", get_flt_bits_str(f));
+
+    struct flt flt = get_flt_val_flt(f);
+    print_flt(flt);
+
+    printf("\nff = %f\n\n", get_flt_bits_val(flt));
 }
